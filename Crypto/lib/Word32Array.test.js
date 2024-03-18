@@ -181,4 +181,21 @@ export class Word32Array {
         }
         return new Word32Array(words, nBytes);
     }
+
+    slice(start, end)
+    {
+        return new Word32Array(this._words.slice(start, end));
+    }
+
+    equals(word32Array)
+    {
+        if (this._words.length !== word32Array.words.length) return false;
+
+        for (let i = 0; i < this._words.length; i++)
+        {
+            if (this._words[i] !== word32Array.words[i]) return false;
+        }
+
+        return true;
+    }
 }
