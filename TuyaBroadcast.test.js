@@ -104,9 +104,9 @@ export default class TuyaBroadcast extends BaseClass
             service.log('Unknown protocol');
             service.log(prefix);
             service.log('Old device header:');
-            service.log([0x00, 0x00, 0x66, 0x99]);
-            service.log('New device header:');
             service.log([0x00, 0x00, 0x55, 0xAA]);
+            service.log('New device header:');
+            service.log([0x00, 0x00, 0x66, 0x99]);
             service.log('------------------------------');
         }
 
