@@ -4,7 +4,10 @@ import { MD5 } from './Crypto/MD5.test.js';
 import { AES } from "./Crypto/AES.test.js";
 import { Hex } from "./Crypto/lib/encoder/Hex.test.js";
 import { GCM } from "./Crypto/lib/algorithm/cipher/mode/GCM.test.js";
+import { Word32Array } from "./Crypto/lib/Word32Array.test.js";
+import { OpenSSLFormatter } from "./Crypto/lib/algorithm/cipher/formatter/OpenSSLFormatter.test.js";
 import { Utf8 } from "./Crypto/lib/encoder/Utf8.test.js";
+import { Base64 } from "./Crypto/lib/encoder/Base64.test.js";
 
 export default class TuyaBroadcast extends BaseClass
 {
@@ -12,7 +15,7 @@ export default class TuyaBroadcast extends BaseClass
     {
         super();
         this.port = 6667;
-        this.key = Hex.parse(MD5.hash('yGAdlopoPVldABfn').toString());
+        this.key = MD5.hash('yGAdlopoPVldABfn');
         this.socket = udp.createSocket();
         this.init();
     }
@@ -87,27 +90,21 @@ export default class TuyaBroadcast extends BaseClass
 
     handleBroadcast(message)
     {
-        const data = this.stringToBytesUTF8(message.data);
+        const data = new Uint8Array(message.buffer);
         const prefix = data.slice(0, 4);
         let decryptedData = null;
 
-        if (this.equals(prefix, [0x00, 0x00, 0x55, 0xAA])) // Protocol up to 3.3
+        if (this.equals(prefix, new Uint8Array([0x00, 0x00, 0x55, 0xAA]))) // Protocol up to 3.3
         {
-            service.log('Old device detected');
+            // service.log('Old device detected');
             // decryptedData = this.decryptECB(data);
-        } else if (this.equals(prefix, [0x00, 0x00, 0x66, 0x99])) // Protocol 3.4+
+        } else if (this.equals(prefix, new Uint8Array([0x00, 0x00, 0x66, 0x99]))) // Protocol 3.4+
         {
             service.log('New device detected');
-            // decryptedData = this.decryptGCM(data);
+            decryptedData = this.decryptGCM(data);
         } else
         {
             service.log('Unknown protocol');
-            service.log(prefix);
-            service.log('Old device header:');
-            service.log([0x00, 0x00, 0x55, 0xAA]);
-            service.log('New device header:');
-            service.log([0x00, 0x00, 0x66, 0x99]);
-            service.log('------------------------------');
         }
 
         if (decryptedData)
@@ -130,28 +127,44 @@ export default class TuyaBroadcast extends BaseClass
         return JSON.parse(decrypted);
     }
 
+    toHexString(byteArray)
+    {
+        const hex = Array.from(byteArray, function(byte) {
+            return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+        }).join('');
+        return hex;
+    }
+
     decryptGCM(data)
     {
-        const header = Hex.parse(data.slice(4, 18));
-        const iv = Hex.parse(data.slice(18, 30));
-        const payload = Hex.parse(data.slice(30, -20));
-        const tag = Hex.parse(data.slice(-20,-4));
+        service.log('Decrypting payload');
+        
+        const aad = Hex.parse(this.toHexString(data.slice(4, 18)));
+        const iv = Hex.parse(this.toHexString(data.slice(18, 30)));
 
-        var decrypted = AES.decrypt(payload, this.key, {iv, mode: GCM});
-
-        service.log(decrypted.toString());
-        // const decipher = crypto.createDecipheriv('aes-128-gcm', this.key, iv);
-        // decipher.setAuthTag(tag);
-        // decipher.setAAD(header);
-        // const decrypted = Buffer.concat([decipher.update(payload), decipher.final()]);
-
+        const payload = Hex.parse(this.toHexString(data.slice(30, -20)));
+        const tag = this.toHexString(data.slice(-20,-4));
 
         try {
-            return JSON.parse(decrypted.slice(4).toString());
+            var authtag = GCM.mac(AES, this.key, iv, aad, payload);
+
+            // Let's see if the data is correct
+            if (authtag.toString() !== tag.toString())
+            {
+                return null;
+            }
+
+            service.log(`Data is valid, now decrypt: ${payload.nSigBytes} bytes`);
+
+            var decrypted = AES.decrypt(payload.toString(Base64), this.key, {iv: iv, mode: GCM});
+
+            service.log(decrypted.toString());
+            service.log(decrypted.toString(Utf8));
+
+            return true; // JSON.parse(decryptedString.slice(4).toString());
         } catch(ex)
         {
-            service.error(decrypted);
-            service.error(ex);
+            service.log(ex.message);
         }
     }
 }
