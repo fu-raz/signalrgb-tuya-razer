@@ -161,7 +161,7 @@ export default class TuyaBroadcast extends BaseClass
             var decrypted = AES.decrypt(base64String, this.key, {iv: iv, mode: GCM});
 
             service.log(`Decrypted length: ${decrypted.nSigBytes} bytes`);
-            // service.log(decrypted.toString());
+            service.log(decrypted.toString());
 
             return true; // JSON.parse(decryptedString.slice(4).toString());
         } catch(ex)
