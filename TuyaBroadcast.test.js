@@ -92,7 +92,7 @@ export default class TuyaBroadcast extends BaseClass
     {
         const data = new Uint8Array(message.buffer);
         const prefix = data.slice(0, 4);
-        let decryptedData = null;
+        let tuyaDeviceData = false;
 
         if (this.equals(prefix, new Uint8Array([0x00, 0x00, 0x55, 0xAA]))) // Protocol up to 3.3
         {
@@ -101,16 +101,16 @@ export default class TuyaBroadcast extends BaseClass
         } else if (this.equals(prefix, new Uint8Array([0x00, 0x00, 0x66, 0x99]))) // Protocol 3.4+
         {
             service.log('New device detected');
-            decryptedData = this.decryptGCM(data);
+            tuyaDeviceData = this.decryptGCM(data);
         } else
         {
             service.log('Unknown protocol');
         }
 
-        if (decryptedData)
+        if (tuyaDeviceData)
         {
             
-            this.trigger('broadcast.device', decryptedData, rinfo);
+            this.trigger('broadcast.device', tuyaDeviceData);
         }
     }
 
@@ -151,22 +151,28 @@ export default class TuyaBroadcast extends BaseClass
             // Let's see if the data is correct
             if (authtag.toString() !== tag.toString())
             {
-                return null;
+                return false;
             }
 
-            service.log(`Data is valid, now decrypt: ${payload.nSigBytes} bytes`);
-            var base64String = payload.toString(Base64);
-            service.log('Base64 length: ' + base64String.length);
+            const decrypted = AES.decrypt(payload.toString(Base64), this.key, {iv: iv, mode: GCM});
+            const byteArray = decrypted.toUint8Array();
+            const jsonByteArray = new Word32Array(byteArray.slice(4));
+            const JSONString = jsonByteArray.toString(Utf8);
 
-            var decrypted = AES.decrypt(base64String, this.key, {iv: iv, mode: GCM});
-
-            service.log(`Decrypted length: ${decrypted.nSigBytes} bytes`);
-            service.log(decrypted.toString());
-
-            return true; // JSON.parse(decryptedString.slice(4).toString());
+            try {
+                const jsonObject = JSON.parse(JSONString.trim());
+                service.log(jsonObject);
+                return jsonObject;
+            } catch(ex)
+            {
+                service.log('Error parsing string');
+                service.log(ex);
+            }
         } catch(ex)
         {
-            service.log(ex.message);
+            service.log(ex);
         }
+
+        return false;
     }
 }

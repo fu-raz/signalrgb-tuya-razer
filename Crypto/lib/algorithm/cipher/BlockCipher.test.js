@@ -56,7 +56,7 @@ export class BlockCipher extends Cipher {
             // Process final blocks
             finalProcessedBlocks = this._process(true);
             // Unpad data
-            padding.unpad(finalProcessedBlocks);
+            // padding.unpad(finalProcessedBlocks);
         }
         return finalProcessedBlocks;
     }
