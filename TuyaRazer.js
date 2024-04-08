@@ -1,6 +1,7 @@
 import TuyaBroadcast from './TuyaBroadcast.test.js';
 import TuyaController from './TuyaController.test.js';
 import TuyaDevice from './TuyaDevice.test.js';
+import TuyaNegotiator from './TuyaNegotiator.test.js';
 
 /* ---------- */
 /*   DEVICE   */
@@ -65,6 +66,8 @@ export function DiscoveryService()
 
     this.devicesLoaded = false;
 
+    this.negotiator = null;
+
     this.Initialize = function()
     {
         this.broadcast = new TuyaBroadcast();
@@ -72,6 +75,8 @@ export function DiscoveryService()
 
         let ipCacheJSON = service.getSetting('ipCache', 'cache');
         if (ipCacheJSON) this.ipCache = JSON.parse(ipCacheJSON);
+
+        this.negotiator = new TuyaNegotiator();
     }
 
     this.handleTuyaDiscovery = function(data)
@@ -91,11 +96,16 @@ export function DiscoveryService()
         if (!service.hasController(deviceData.gwId))
         {
             service.log('Creating controller for ' + deviceData.gwId);
-            let controller = new TuyaController(deviceData);
-            controller.saveToCache();
+            try {
+                let controller = new TuyaController(deviceData);
+                controller.saveToCache();
 
-            service.addController(controller);
-            if (controller.enabled) service.announceController(controller);
+                service.addController(controller);
+                if (controller.enabled) service.announceController(controller);
+            } catch(ex)
+            {
+                service.log(ex.message);
+            }
         }
     }
 

@@ -1,1 +1,1 @@
-export { Hex } from "./lib/encoder/Hex";
+export { Hex } from "./lib/encoder/Hex.test.js";

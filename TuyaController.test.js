@@ -6,6 +6,12 @@ export default class TuyaController extends BaseClass
     constructor(deviceData)
     {
         super();
+        this.deviceList = this.getDevices();
+
+        this.enabled = deviceData.hasOwnProperty('enabled') ? deviceData.enabled : false;
+        this.deviceType = deviceData.hasOwnProperty('deviceType') ? deviceData.deviceType : 0;
+        this.localKey = deviceData.hasOwnProperty('localKey') ? deviceData.localKey : null;
+
         this.id = deviceData.gwId;
         this.name = this.getName();
 
@@ -14,22 +20,17 @@ export default class TuyaController extends BaseClass
         this.gwId = deviceData.gwId;
         this.version = deviceData.version;
         this.productKey = deviceData.productKey;
-
-        this.enabled = deviceData.hasOwnProperty('enabled') ? deviceData.enabled : false;
-        this.deviceType = deviceData.hasOwnProperty('deviceType') ? deviceData.deviceType : 0;
-        this.localKey = deviceData.hasOwnProperty('localKey') ? deviceData.localKey : null;
-
-        this.deviceList = this.getDevices();
     }
 
     getName()
     {   
         if (this.deviceType !== 0)
         {
-            return `${this.deviceList[this.deviceType].name} - ${this.id}`;
+            service.log(`Trying to find device ${this.deviceType}`);
+            return `${DeviceList[this.deviceType].name} - ${this.id}`;
         }
 
-        return`Tuya device ${this.id}`;
+        return `Tuya device ${this.id}`;
     }
 
     getDevices()
@@ -102,6 +103,7 @@ export default class TuyaController extends BaseClass
 
     saveToCache()
     {
+        service.log('Saving to cache');
         let ipCache = {};
         const ipCacheJSON = service.getSetting('ipCache', 'cache');
         if (ipCacheJSON) ipCache = JSON.parse(ipCacheJSON);

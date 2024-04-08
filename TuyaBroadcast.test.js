@@ -2,11 +2,11 @@ import udp from "@SignalRGB/udp";
 import BaseClass from './BaseClass.test.js';
 import { MD5 } from './Crypto/MD5.test.js';
 import { AES } from "./Crypto/AES.test.js";
-import { Hex } from "./Crypto/lib/encoder/Hex.test.js";
+import { Hex } from "./Crypto/Hex.test.js";
+import { Utf8 } from "./Crypto/Utf8.test.js";
 import { GCM } from "./Crypto/lib/algorithm/cipher/mode/GCM.test.js";
 import { Word32Array } from "./Crypto/lib/Word32Array.test.js";
 import { OpenSSLFormatter } from "./Crypto/lib/algorithm/cipher/formatter/OpenSSLFormatter.test.js";
-import { Utf8 } from "./Crypto/lib/encoder/Utf8.test.js";
 import { Base64 } from "./Crypto/lib/encoder/Base64.test.js";
 
 export default class TuyaBroadcast extends BaseClass
@@ -51,7 +51,6 @@ export default class TuyaBroadcast extends BaseClass
             // decryptedData = this.decryptECB(data);
         } else if (this.equals(prefix, new Uint8Array([0x00, 0x00, 0x66, 0x99]))) // Protocol 3.4+
         {
-            service.log('New device detected');
             tuyaDeviceData = this.decryptGCM(data);
         } else
         {
@@ -88,8 +87,6 @@ export default class TuyaBroadcast extends BaseClass
 
     decryptGCM(data)
     {
-        service.log('Decrypting payload');
-        
         const aad = Hex.parse(this.toHexString(data.slice(4, 18)));
         const iv = Hex.parse(this.toHexString(data.slice(18, 30)));
 

@@ -1,3 +1,6 @@
+import { Utf8 } from './Crypto/Utf8.test.js';
+import { Hex } from './Crypto/Hex.test.js';
+
 export default class BaseClass
 {
     constructor()
@@ -62,19 +65,6 @@ export default class BaseClass
                 });
             }
         }
-    }
-
-    getHexFromString(str) {
-        return Buffer.from(str, 'utf-8').toString('hex');
-    }
-
-    getByteDataFromLen(len, data, atEnd = false)
-    {
-        // Zero pad or append
-        data = data.toString();
-        const stringLength = len * 2;
-        const padding = '0'.repeat(stringLength - data.length);
-        return atEnd ? data + padding : padding + data;
     }
 
     zeroPad(string, len)

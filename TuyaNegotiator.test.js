@@ -1,5 +1,9 @@
+import udp from "@SignalRGB/udp";
+
 import BaseClass from './BaseClass.test.js';
 import DeviceList from './DeviceList.test.js';
+
+import { Hex } from './Crypto/Hex.test.js';
 
 export default class TuyaNegotiator extends BaseClass
 {
@@ -10,7 +14,7 @@ export default class TuyaNegotiator extends BaseClass
         this.socket = udp.createSocket();
 
         this.uuid = this.getUUID();
-        this.crc = this.getCrc();
+        this.crc = this.getCrc(this.uuid);
 
         this.init();
     }
@@ -18,7 +22,7 @@ export default class TuyaNegotiator extends BaseClass
     init()
     {
         this.socket.bind(this.port);
-        this.socket.on('message', this.handleNegotiation.bind(this));
+        // this.socket.on('message', this.handleNegotiation.bind(this));
         this.socket.on('error', service.log);
     }
 
@@ -27,12 +31,18 @@ export default class TuyaNegotiator extends BaseClass
         return '420691337420b00b'; // We could randomize this if needed
     }
 
-    getCrc()
+    getCrc(uuid)
     {
-        let uuid = this.getByteDataFromLen(25, this.getHexFromString(this.uuid), true);
-        let crcId = crc32(Buffer.from(uuid + '00', 'hex'));
-        return crcId;
+        let uuidBuffer = Hex.parse(uuid);
+        if (uuidBuffer.nSigBytes < 25)
+        {
+            for (let i = (25 - uuidBuffer.nSigBytes); i < 25; i++)
+            {
+                uuidBuffer.concat([0]);
+            }
+        }
+        service.log(uuidBuffer.toUint8Array());
+        service.log(uuidBuffer);
+        return null;
     }
-
-    
 }
