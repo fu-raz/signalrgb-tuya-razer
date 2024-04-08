@@ -24,56 +24,7 @@ export default class TuyaBroadcast extends BaseClass
     {
         this.socket.bind(this.port);
         this.socket.on('message', this.handleBroadcast.bind(this));
-    }
-
-    stringToBytesUTF8(str) {
-        var bytes = [];
-        for (var i = 0; i < str.length; i++) {
-            var charCode = str.charCodeAt(i);
-            if (charCode < 0x80) { // 1-byte characters
-                bytes.push(charCode);
-            } else if (charCode < 0x800) { // 2-byte characters
-                bytes.push(0xc0 | (charCode >> 6),
-                           0x80 | (charCode & 0x3f));
-            } else if (charCode < 0xd800 || charCode >= 0xe000) { // 3-byte characters
-                bytes.push(0xe0 | (charCode >> 12),
-                           0x80 | ((charCode >> 6) & 0x3f),
-                           0x80 | (charCode & 0x3f));
-            } else { // 4-byte characters (surrogate pairs)
-                i++; // get the next character
-                // UTF-16 encodes 0x10000-0x10FFFF by subtracting 0x10000 and splitting the
-                // 20 bits of 0x0-0xFFFFF into two halves
-                var code = 0x10000 + (((charCode & 0x3ff) << 10)
-                        | (str.charCodeAt(i) & 0x3ff));
-                bytes.push(0xf0 | (code >> 18),
-                           0x80 | ((code >> 12) & 0x3f),
-                           0x80 | ((code >> 6) & 0x3f),
-                           0x80 | (code & 0x3f));
-            }
-        }
-        return bytes;
-    }
-
-    stringToBytesUTF16(str) {
-        var bytes = [];
-        for (var i = 0; i < str.length; i++) {
-            var codeUnit = str.charCodeAt(i);
-            bytes.push(codeUnit & 0xFF); // Low byte
-            bytes.push(codeUnit >> 8);   // High byte
-        }
-        return bytes;
-    }
-
-    stringToBytesLatin1(str) {
-        var bytes = [];
-        for (var i = 0; i < str.length; i++) {
-            var charCode = str.charCodeAt(i);
-            if (charCode > 0xFF) {
-                console.warn("Character code at position " + i + " exceeds Latin1 range");
-            }
-            bytes.push(charCode & 0xFF);
-        }
-        return bytes;
+        this.socket.on('error', service.log);
     }
 
     equals(a, b)
@@ -161,7 +112,7 @@ export default class TuyaBroadcast extends BaseClass
 
             try {
                 const jsonObject = JSON.parse(JSONString.trim());
-                service.log(jsonObject);
+                // service.log(jsonObject);
                 return jsonObject;
             } catch(ex)
             {

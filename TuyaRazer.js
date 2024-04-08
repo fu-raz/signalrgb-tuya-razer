@@ -1,4 +1,6 @@
 import TuyaBroadcast from './TuyaBroadcast.test.js';
+import TuyaController from './TuyaController.test.js';
+import TuyaDevice from './TuyaDevice.test.js';
 
 /* ---------- */
 /*   DEVICE   */
@@ -20,8 +22,15 @@ export function ControllableParameters()
 	];
 }
 
+let tuyaDevice;
+
 export function Initialize()
 {
+    if (controller.enabled)
+    {
+        // Here we create the device
+        tuyaDevice = new TuyaDevice(controller.toJson());
+    }
 }
 
 export function Update()
@@ -31,6 +40,8 @@ export function Update()
 
 export function Render()
 {
+    let now = Date.now();
+    tuyaDevice.render(lightingMode, forcedColor, now);
 }
 
 export function Shutdown()
@@ -47,24 +58,54 @@ export function Validate()
 /* ------------- */
 export function DiscoveryService()
 {
-    this.timeSinceLastReq = 0;
+    this.ipCache = {};
+
+    this.lastPollTime = -5000;
+    this.PollInterval = 5000;
+
+    this.devicesLoaded = false;
 
     this.Initialize = function()
     {
         this.broadcast = new TuyaBroadcast();
         this.broadcast.on('broadcast.device', this.handleTuyaDiscovery.bind(this));
-    }
 
-    this.Update = function()
-    {
-    }
-
-    this.Discovered = function(receivedPacket)
-    {
+        let ipCacheJSON = service.getSetting('ipCache', 'cache');
+        if (ipCacheJSON) this.ipCache = JSON.parse(ipCacheJSON);
     }
 
     this.handleTuyaDiscovery = function(data)
     {
-        service.log(data);
+        let deviceData = data;
+
+        // Try to find cached data
+        if (this.ipCache.hasOwnProperty(data.gwId))
+        {
+            // If we have cached data, use the cached data
+            deviceData = this.ipCache[data.gwId];
+            // Set a new ip if it no longer matches
+            if (deviceData.ip !== data.ip) deviceData.ip = data.ip;
+        }
+
+        // Check if there's already a controller with this id
+        if (!service.hasController(deviceData.gwId))
+        {
+            service.log('Creating controller for ' + deviceData.gwId);
+            let controller = new TuyaController(deviceData);
+            controller.saveToCache();
+
+            service.addController(controller);
+            if (controller.enabled) service.announceController(controller);
+        }
+    }
+
+    this.Update = function(force)
+    {
+        // Also not using this
+    }
+
+    this.Discovered = function(receivedPacket)
+    {
+        // We don't use this
     }
 }
