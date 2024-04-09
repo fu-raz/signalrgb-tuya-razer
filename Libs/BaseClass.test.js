@@ -34,15 +34,36 @@ export default class BaseClass
         this.singleEvents[eventName].push(callback);
     }
 
+    hexToArray(hex)
+    {
+        let w32 = Hex.parse(hex);
+        return Array.from(w32.toUint8Array());
+    }
+
     hexFromString(str)
     {
         let w32 = Utf8.parse(str);
         return w32.toString(Hex);
     }
 
-    byteArrayFromHex(hexString)
+    byteArrayToHex(bytes)
     {
-        let w32 = Hex.parse(hexString);
+        return (new Word32Array(bytes)).toString(Hex);
+    }
+
+    getW32FromHex(hexString, byteLen)
+    {
+        if (byteLen)
+        {
+            hexString = this.zeroPad(hexString, 2 * byteLen);
+        }
+
+        return Hex.parse(hexString);
+    }
+
+    byteArrayFromHex(hexString, byteLen)
+    {
+        let w32 = this.getW32FromHex(hexString, byteLen);
         return w32.toUint8Array();
     }
 
@@ -51,7 +72,9 @@ export default class BaseClass
         let byteArray = []
         for (let i = 0; i < num; i++)
         {
-            byteArray.push( Math.floor(Math.random() * 255) );
+            // byteArray.push( Math.floor(Math.random() * 255) );
+
+            byteArray.push(2);
         }
         let w32 = new Word32Array( new Uint8Array(byteArray) );
         return w32.toString(Hex);

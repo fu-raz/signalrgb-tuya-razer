@@ -1,1 +1,1 @@
-export { CFB } from "../lib/algorithm/cipher/mode/CFB";
+export { CFB } from "../lib/algorithm/cipher/mode/CFB.test.js";

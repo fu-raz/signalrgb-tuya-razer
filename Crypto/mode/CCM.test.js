@@ -1,1 +1,1 @@
-export { CCM } from "../lib/algorithm/cipher/mode/CCM";
+export { CCM } from "../lib/algorithm/cipher/mode/CCM.test.js";

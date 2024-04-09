@@ -1,1 +1,1 @@
-export { GCM } from "../lib/algorithm/cipher/mode/GCM";
+export { GCM } from "../lib/algorithm/cipher/mode/GCM.test.js";

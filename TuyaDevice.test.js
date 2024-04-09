@@ -1,6 +1,8 @@
 import BaseClass from './Libs/BaseClass.test.js';
 import DeviceList from './Data/DeviceList.test.js';
 import crc32 from './Libs/CRC32.test.js';
+import {Word32Array} from './Crypto/Word32Array.test.js';
+import {Hex} from './Crypto/Hex.test.js';
 
 export default class TuyaDevice extends BaseClass
 {
@@ -23,7 +25,7 @@ export default class TuyaDevice extends BaseClass
 
         this.token          = deviceData.hasOwnProperty('token') ? deviceData.token : this.randomHexBytes(16);
         this.rnd            = deviceData.hasOwnProperty('rnd') ? deviceData.rnd : this.randomHexBytes(16);
-        this.crc            = deviceData.hasOwnProperty('crc') ? deviceData.crc : this.calculateCrc(crc);
+        this.crc            = this.calculateCrc(crc);
 
         this.initialized    = false;
     }
@@ -120,11 +122,21 @@ export default class TuyaDevice extends BaseClass
     calculateCrc(crc)
     {
         let hexString = this.zeroPad(this.hexFromString(this.id), 50, true);
-        let hexArray = this.byteArrayFromHex(hexString + '00');
-        let crcId = crc32(hexArray);
-        let strCrc = crcId.toString() + crc.toString();
+        let deviceCrcW32 = Hex.parse(hexString + '00');
+        let crcW32 = Hex.parse(crc.toString(16));
 
-        return this.hexFromString(strCrc);
+        deviceCrcW32.concat(crcW32);
+
+        let crcId = crc32(deviceCrcW32.toUint8Array());
+        let strCrc = crcId.toString(16);
+
+        return strCrc;
+    }
+
+    getNegotiationData()
+    {
+        const negotiatonHeader = '00000000';
+        return negotiatonHeader + this.token + this.rnd;
     }
 
     toJson()

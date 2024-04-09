@@ -1,13 +1,15 @@
-import { Hex } from "./Crypto/Hex.test";
-import BaseClass from "./Libs/BaseClass.test";
+import { Hex } from "./Crypto/Hex.test.js";
+import BaseClass from "./Libs/BaseClass.test.js";
+import { Word32Array } from './Crypto/Word32Array.test.js';
 
 export default class TuyaMessage extends BaseClass
 {
-    validHeader = Hex.parse('00006699').toUint8Array();
-    validTail = Hex.parse('00009966').toUint8Array();
-
     constructor(data)
     {
+        super();
+        this.validHeader = Hex.parse('00006699').toUint8Array();
+        this.validTail = Hex.parse('00009966').toUint8Array();
+
         if (data)
         {
             this.header = data.slice(0, 4);

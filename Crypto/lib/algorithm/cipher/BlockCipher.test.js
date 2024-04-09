@@ -1,5 +1,6 @@
 import { Cipher } from "./Cipher.test.js";
 import { CBC } from "./mode/CBC.test.js";
+import { GCM } from "./mode/GCM.test.js";
 import { Pkcs7 } from "./pad/Pkcs7.test.js";
 export class BlockCipher extends Cipher {
     constructor(props) {
@@ -47,8 +48,13 @@ export class BlockCipher extends Cipher {
         const padding = this._padding;
         // Finalize
         if (this._transformMode === Cipher.ENC_TRANSFORM_MODE) {
-            // Pad data
-            padding.pad(this._data, this.blockSize);
+            
+            if (this._Mode !== GCM)
+            {
+                // Pad data
+                padding.pad(this._data, this.blockSize);
+            }
+            
             // Process final blocks
             finalProcessedBlocks = this._process(true);
         }
@@ -56,7 +62,11 @@ export class BlockCipher extends Cipher {
             // Process final blocks
             finalProcessedBlocks = this._process(true);
             // Unpad data
-            // padding.unpad(finalProcessedBlocks);
+            if (this._Mode !== GCM)
+            {
+                padding.unpad(finalProcessedBlocks);
+            }
+            
         }
         return finalProcessedBlocks;
     }

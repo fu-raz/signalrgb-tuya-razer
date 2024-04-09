@@ -1,1 +1,1 @@
-export { Word32Array } from "./lib/Word32Array";
+export { Word32Array } from "./lib/Word32Array.test.js";

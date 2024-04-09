@@ -101,13 +101,27 @@ export function DiscoveryService()
                 let controller = new TuyaController(tuyaDevice);
                 tuyaDevice.saveToCache();
 
-                this.negotiator.addDevice(tuyaDevice);
+                try {
+                    this.negotiator.addDevice(tuyaDevice);
+                } catch(ex)
+                {
+                    service.log(ex.message);
+                }
 
                 service.addController(controller);
                 if (controller.enabled) service.announceController(controller);
             } catch(ex)
             {
                 service.log(ex.message);
+            }
+        } else
+        {
+            // If there is a controller already
+            let controller = service.getController(deviceData.gwId);
+            // But the device detected isn't initialized
+            if (!controller.tuyaDevice.initialized && controller.tuyaDevice.localKey)
+            {
+                // this.negotiator.negotiate();
             }
         }
     }
