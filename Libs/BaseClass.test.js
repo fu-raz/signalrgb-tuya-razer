@@ -1,5 +1,6 @@
-import { Utf8 } from './Crypto/Utf8.test.js';
-import { Hex } from './Crypto/Hex.test.js';
+import { Utf8 } from '../Crypto/Utf8.test.js';
+import { Hex } from '../Crypto/Hex.test.js';
+import { Word32Array } from '../Crypto/lib/Word32Array.test.js';
 
 export default class BaseClass
 {
@@ -31,6 +32,41 @@ export default class BaseClass
             this.singleEvents[eventName] = [];
         }
         this.singleEvents[eventName].push(callback);
+    }
+
+    hexFromString(str)
+    {
+        let w32 = Utf8.parse(str);
+        return w32.toString(Hex);
+    }
+
+    byteArrayFromHex(hexString)
+    {
+        let w32 = Hex.parse(hexString);
+        return w32.toUint8Array();
+    }
+
+    randomHexBytes(num)
+    {
+        let byteArray = []
+        for (let i = 0; i < num; i++)
+        {
+            byteArray.push( Math.floor(Math.random() * 255) );
+        }
+        let w32 = new Word32Array( new Uint8Array(byteArray) );
+        return w32.toString(Hex);
+    }
+
+    equals(a, b)
+    {
+        if (a === b) return true; // checks if both references point to the same object
+        if (a == null || b == null) return false; // checks if one of the arrays is null
+        if (a.length !== b.length) return false; // arrays with different lengths are not equal
+    
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) return false; // as soon as a non-matching element is found, return false
+        }
+        return true; // if none of the above conditions are met, the arrays are considered equal
     }
 
     trigger(eventName)
@@ -67,10 +103,20 @@ export default class BaseClass
         }
     }
 
-    zeroPad(string, len)
+    zeroPad(string, len, rev)
     {
-        let zeroPadded = "0".repeat(len) + string;
-        return zeroPadded.slice(-len);
+        let zeroPadded = "0".repeat(len);
+
+        if (rev === true)
+        {
+            zeroPadded = string + zeroPadded;
+            return zeroPadded.slice(0, len);
+        } else
+        {
+            zeroPadded = zeroPadded + string;
+            return zeroPadded.slice(-len);
+        }
+        
     }
 
     rgbToHsv(arr)

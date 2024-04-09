@@ -65,7 +65,7 @@ Item {
 						id: enabled
 						text: qsTr("Enabled")
 						leftPadding: 380
-						position: controller.enabled
+						position: controller.tuyaDevice.enabled
 						onClicked: {
 							updateButton.enabled = controller.validateDeviceUpdate(enabled.checked, deviceType.currentValue, localKey.text);
 						}
@@ -79,7 +79,7 @@ Item {
 					Text {
 						width: parent.width - 60
 						color: theme.primarytextcolor
-						text: controller.name
+						text: controller.tuyaDevice.name
 						font.pixelSize: 18
 						font.family: "Poppins"
 						font.weight: Font.Bold
@@ -91,7 +91,7 @@ Item {
 
 					Text {
 						color: theme.primarytextcolor
-						text: "IP: " + controller.ip
+						text: "IP: " + controller.tuyaDevice.ip
 						font.pixelSize: 14
 						font.family: "Poppins"
 					}
@@ -102,7 +102,7 @@ Item {
 
 					Text {
 						color: theme.primarytextcolor
-						text: "Version: " + controller.version
+						text: "Version: " + controller.tuyaDevice.version
 						font.pixelSize: 14
 						font.family: "Poppins"
 					}
@@ -113,7 +113,7 @@ Item {
 
 					Text {
 						color: theme.primarytextcolor
-						text: "Product key: " + controller.productKey
+						text: "Product key: " + controller.tuyaDevice.productKey
 						font.pixelSize: 14
 						font.family: "Poppins"
 					}
@@ -124,7 +124,7 @@ Item {
 
 					Text {
 						color: theme.primarytextcolor
-						text: "Product UUID: " + controller.uuid
+						text: "Product UUID: " + controller.tuyaDevice.uuid
 						font.pixelSize: 14
 						font.family: "Poppins"
 					}
@@ -135,7 +135,7 @@ Item {
 
 					Text {
 						color: theme.primarytextcolor
-						text: "Product gwId: " + controller.gwId
+						text: "Product gwId: " + controller.tuyaDevice.gwId
 						font.pixelSize: 14
 						font.family: "Poppins"
 						bottomPadding: 15
@@ -180,7 +180,7 @@ Item {
 							topInset: 0
 							bottomInset: 0
 							verticalPadding: 0
-							Component.onCompleted: currentIndex = indexOfValue(controller.deviceType)
+							Component.onCompleted: currentIndex = indexOfValue(controller.tuyaDevice.deviceType)
 							
 							onActivated: {
 								updateButton.enabled = controller.validateDeviceUpdate(enabled.checked, deviceType.currentValue, localKey.text);
@@ -228,7 +228,7 @@ Item {
 							font.pixelSize: 16
 							verticalAlignment: TextInput.AlignVCenter
 							placeholderText: ""
-							text: controller.localKey
+							text: controller.tuyaDevice.localKey
 							visible: true
 							
 							background: Item {

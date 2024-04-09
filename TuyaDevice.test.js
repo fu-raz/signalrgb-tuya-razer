@@ -1,18 +1,42 @@
-import BaseClass from './BaseClass.test.js';
-import DeviceList from './DeviceList.test.js';
+import BaseClass from './Libs/BaseClass.test.js';
+import DeviceList from './Data/DeviceList.test.js';
+import crc32 from './Libs/CRC32.test.js';
 
 export default class TuyaDevice extends BaseClass
 {
-    constructor(deviceData)
+    constructor(deviceData, crc)
     {
         super();
-        this.deviceData = deviceData;
-        this.tuyaLeds = DeviceList[this.deviceData.type].leds;
 
-        this.ledNames = this.getLedNames();
-        this.ledPositions = this.getLedPositions();
+        this.enabled        = deviceData.hasOwnProperty('enabled') ? deviceData.enabled : false;
+        this.deviceType     = deviceData.hasOwnProperty('deviceType') ? deviceData.deviceType : 0;
+        this.localKey       = deviceData.hasOwnProperty('localKey') ? deviceData.localKey : null;
 
-        this.setupDevice();
+        this.id             = deviceData.gwId;
+        this.name           = this.getName();
+
+        this.ip             = deviceData.ip;
+        this.uuid           = deviceData.uuid;
+        this.gwId           = deviceData.gwId;
+        this.version        = deviceData.version;
+        this.productKey     = deviceData.productKey;
+
+        this.token          = deviceData.hasOwnProperty('token') ? deviceData.token : this.randomHexBytes(16);
+        this.rnd            = deviceData.hasOwnProperty('rnd') ? deviceData.rnd : this.randomHexBytes(16);
+        this.crc            = deviceData.hasOwnProperty('crc') ? deviceData.crc : this.calculateCrc(crc);
+
+        this.initialized    = false;
+    }
+
+    getName()
+    {   
+        if (this.deviceType !== 0)
+        {
+            service.log(`Trying to find device ${this.deviceType}`);
+            return `${DeviceList[this.deviceType].name} - ${this.id}`;
+        }
+
+        return `Tuya device ${this.id}`;
     }
 
     getLedNames()
@@ -37,6 +61,10 @@ export default class TuyaDevice extends BaseClass
 
     setupDevice()
     {
+        this.ledNames = this.getLedNames();
+        this.ledPositions = this.getLedPositions();
+        this.tuyaLeds = DeviceList[this.deviceType].leds;
+
         device.setName(this.deviceData.name);
         device.setSize([this.tuyaLeds.length, 1]);
         device.setControllableLeds(this.ledNames, this.ledPositions);
@@ -54,5 +82,81 @@ export default class TuyaDevice extends BaseClass
                 
                 break;
         }
+    }
+
+    validateDeviceUpdate(enabled, deviceType, localKey)
+    {
+        let shouldSave = false;
+        if (this.enabled !== enabled)
+        {
+            shouldSave = true;
+        }
+
+        if (this.deviceType !== deviceType)
+        {
+            shouldSave = true;
+        }
+
+        if (this.localKey !== localKey)
+        {
+            shouldSave = true;
+        }
+
+        return shouldSave;
+    }
+
+    updateDevice(enabled, deviceType, localKey)
+    {
+        if (this.validateDeviceUpdate(enabled, deviceType, localKey))
+        {
+            this.enabled = enabled;
+            this.deviceType = deviceType;
+            this.localKey = localKey;
+
+            this.saveToCache();
+        }
+    }
+
+    calculateCrc(crc)
+    {
+        let hexString = this.zeroPad(this.hexFromString(this.id), 50, true);
+        let hexArray = this.byteArrayFromHex(hexString + '00');
+        let crcId = crc32(hexArray);
+        let strCrc = crcId.toString() + crc.toString();
+
+        return this.hexFromString(strCrc);
+    }
+
+    toJson()
+    {
+        return {
+            id: this.id,
+            name: this.name,
+            enabled: this.enabled,
+            ip: this.ip,
+            uuid: this.uuid,
+            gwId: this.gwId,
+            version: this.version,
+            productKey: this.productKey,
+            deviceType: this.deviceType,
+            localKey: this.localKey,
+            token: this.token,
+            rnd: this.rnd,
+            crc: this.crc
+        };
+    }
+
+    saveToCache()
+    {
+        service.log('Saving to cache');
+        let ipCache = {};
+        const ipCacheJSON = service.getSetting('ipCache', 'cache');
+        if (ipCacheJSON) ipCache = JSON.parse(ipCacheJSON);
+
+        ipCache[this.gwId] = this.toJson();
+        service.saveSetting('ipCache', 'cache', JSON.stringify(ipCache));
+
+        service.log('Saved data');
+        service.log(this.toJson());
     }
 }

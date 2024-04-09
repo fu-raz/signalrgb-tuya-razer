@@ -70,13 +70,13 @@ export function DiscoveryService()
 
     this.Initialize = function()
     {
-        this.broadcast = new TuyaBroadcast();
-        this.broadcast.on('broadcast.device', this.handleTuyaDiscovery.bind(this));
-
         let ipCacheJSON = service.getSetting('ipCache', 'cache');
         if (ipCacheJSON) this.ipCache = JSON.parse(ipCacheJSON);
 
         this.negotiator = new TuyaNegotiator();
+
+        this.broadcast = new TuyaBroadcast();
+        this.broadcast.on('broadcast.device', this.handleTuyaDiscovery.bind(this));
     }
 
     this.handleTuyaDiscovery = function(data)
@@ -97,8 +97,11 @@ export function DiscoveryService()
         {
             service.log('Creating controller for ' + deviceData.gwId);
             try {
-                let controller = new TuyaController(deviceData);
-                controller.saveToCache();
+                let tuyaDevice = new TuyaDevice(deviceData, this.negotiator.crc);
+                let controller = new TuyaController(tuyaDevice);
+                tuyaDevice.saveToCache();
+
+                this.negotiator.addDevice(tuyaDevice);
 
                 service.addController(controller);
                 if (controller.enabled) service.announceController(controller);
@@ -111,7 +114,12 @@ export function DiscoveryService()
 
     this.Update = function(force)
     {
+        const now = Date.now();
         // Also not using this
+        if (this.negotiator)
+        {
+            this.negotiator.handleQueue(now);
+        }
     }
 
     this.Discovered = function(receivedPacket)

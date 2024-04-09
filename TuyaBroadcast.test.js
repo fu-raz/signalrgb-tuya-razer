@@ -1,12 +1,11 @@
 import udp from "@SignalRGB/udp";
-import BaseClass from './BaseClass.test.js';
+import BaseClass from './Libs/BaseClass.test.js';
 import { MD5 } from './Crypto/MD5.test.js';
 import { AES } from "./Crypto/AES.test.js";
 import { Hex } from "./Crypto/Hex.test.js";
 import { Utf8 } from "./Crypto/Utf8.test.js";
 import { GCM } from "./Crypto/lib/algorithm/cipher/mode/GCM.test.js";
 import { Word32Array } from "./Crypto/lib/Word32Array.test.js";
-import { OpenSSLFormatter } from "./Crypto/lib/algorithm/cipher/formatter/OpenSSLFormatter.test.js";
 import { Base64 } from "./Crypto/lib/encoder/Base64.test.js";
 
 export default class TuyaBroadcast extends BaseClass
@@ -25,18 +24,6 @@ export default class TuyaBroadcast extends BaseClass
         this.socket.bind(this.port);
         this.socket.on('message', this.handleBroadcast.bind(this));
         this.socket.on('error', service.log);
-    }
-
-    equals(a, b)
-    {
-        if (a === b) return true; // checks if both references point to the same object
-        if (a == null || b == null) return false; // checks if one of the arrays is null
-        if (a.length !== b.length) return false; // arrays with different lengths are not equal
-    
-        for (var i = 0; i < a.length; i++) {
-            if (a[i] !== b[i]) return false; // as soon as a non-matching element is found, return false
-        }
-        return true; // if none of the above conditions are met, the arrays are considered equal
     }
 
     handleBroadcast(message)
