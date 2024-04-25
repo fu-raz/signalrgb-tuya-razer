@@ -9,6 +9,7 @@ import { GCM } from './Crypto/mode/GCM.test.js';
 import { Hex } from './Crypto/Hex.test.js';
 import { Base64 } from './Crypto/Base64.test.js';
 import TuyaMessage from './TuyaMessage.test.js';
+import TuyaNegotiationMessage from './TuyaNegotiationMessage.test.js';
 
 export default class TuyaNegotiator extends BaseClass
 {
@@ -64,7 +65,7 @@ export default class TuyaNegotiator extends BaseClass
     getCrc(uuid)
     {
         let hexString = this.zeroPad(this.hexFromString(uuid), 50, true);
-        let hexArray = this.byteArrayFromHex(hexString + '00');
+        let hexArray = this.hexToByteArray(hexString + '00');
         return crc32(hexArray);
     }
 
@@ -123,14 +124,15 @@ export default class TuyaNegotiator extends BaseClass
             let device = this.devices[crcId];
             if (!device.initialized && device.localKey)
             {
-                devices.push(device);
+                if (device.enabled) devices.push(device);
             }
         }
 
         // If there are no devices, return
         if (devices.length === 0)
         {
-            this.shouldNegotiate
+            this.shouldNegotiate = false;
+            this.negotiationAttempts = 0;
             return;
         }
 
@@ -159,7 +161,7 @@ export default class TuyaNegotiator extends BaseClass
         let negotiationMessage = ''
         for (const device of deviceBatchData)
         {
-            negotiationMessage += this.createNegotiatonRequest(device, aad, nonce);
+                negotiationMessage += this.createNegotiatonRequest(device, aad, nonce);
         }
 
         let finalMessage = this.header;
@@ -170,8 +172,10 @@ export default class TuyaNegotiator extends BaseClass
 
         if (this.broadcastIp)
         {
+            let byteArray = this.hexToByteArray(finalMessage);
             service.log(`Broadcasting (${this.broadcastIp}) the negotiation: ${finalMessage}`);
-            this.socket.write(this.byteArrayFromHex(finalMessage), this.broadcastIp, this.port);
+            service.log(`Writing to ${this.port}`);
+            this.socket.write(byteArray.buffer, this.broadcastIp, this.port);
         }
     }
 
@@ -211,10 +215,10 @@ export default class TuyaNegotiator extends BaseClass
         let deviceData = device.getNegotiationData();
         const [encodedData, tag] = this.encryptGCM(deviceData, nonce, aad, this.key);
 
-        service.log('Using device crc: ' + device.crc);
+        let length = this.getW32FromHex((encodedData.length/2).toString(16), 4).toString(Hex);
 
         let negotiationRequest = device.crc;
-            negotiationRequest += this.getW32FromHex((encodedData.length/2).toString(16), 4).toString(Hex);
+            negotiationRequest += length;
             negotiationRequest += encodedData;
             negotiationRequest += tag;
 
@@ -227,27 +231,55 @@ export default class TuyaNegotiator extends BaseClass
         nonce = Hex.parse(nonce);
 
         let payload = Hex.parse(sourceData);
-        let authData = Utf8.parse(aad);
 
         let encryptedData = AES.encrypt(payload, key, {iv: nonce, mode: GCM});
 
         let cipherText = encryptedData.cipherText;
         let tagLength = 16;
 
-        let authTag = GCM.mac(AES, key, nonce, authData, cipherText, tagLength);
-      
-        // Convert base 64 data to hex
         let decodedEncryptedData = Base64.parse(encryptedData.toString()).toString(Hex);
 
-        return [decodedEncryptedData, authTag.toString(Hex)];
+        if (aad)
+        {
+            let authData = Hex.parse(aad);
+            let authTag = GCM.mac(AES, key, nonce, authData, cipherText, tagLength);
+
+            return [decodedEncryptedData, authTag.toString(Hex)];
+        } else
+        {
+            return [decodedEncryptedData, null];
+        }
+    }
+
+    decryptGCM(sourceData, nonce, aad, key, tag)
+    {
+        nonce = Hex.parse(nonce);
+        aad = Hex.parse(aad);
+        key = Hex.parse(key);
+        tag = Hex.parse(tag);
+
+        let payload = Hex.parse(sourceData);
+
+        var authtag = GCM.mac(AES, key, nonce, aad, payload);
+
+        // Let's see if the data is correct
+        if (authtag.toString() !== tag.toString())
+        {
+            service.log('Auth tag doesn\'t match supplied tag');
+            return [false, null];
+        }
+
+        const decrypted = AES.decrypt(payload.toString(Base64), key, {iv: nonce, mode: GCM});
+        return [true, decrypted];
     }
 
     onPacketReceived(packet)
     {
+        service.log(packet);
         let data = new Uint8Array(packet.buffer);
         if (data.length < 64) return;
 
-        // let byteArray = this.byteArrayFromHex(data);
+        // let byteArray = this.hexToByteArray(data);
         // Razer message:
         let message = new TuyaMessage(data);
         if (message.isValid())
@@ -260,6 +292,80 @@ export default class TuyaNegotiator extends BaseClass
             if (this.byteArrayToHex(message.type) === this.type.negotiationResponse)
             {
                 service.log(`Looking for device with crc ${messageCrc}`);
+                if (this.devices.hasOwnProperty(messageCrc))
+                {
+                    let device = this.devices[messageCrc];
+                    this.negotiateSessionKey(device, message);
+                }
+            }
+        }
+    }
+
+    negotiateSessionKey(device, message)
+    {
+        const localKeyHex = this.hexFromString(device.localKey, 16);
+
+        service.log('Hexified local key ' + localKeyHex);
+        
+        // Generate the negotiation key from the device local key
+        const [negotiationKey] = this.encryptGCM(
+            device.token,
+            device.token.slice(0, 24),
+            null,
+            localKeyHex
+        )
+
+        service.log('Encrypted to ' + negotiationKey);
+
+        // Decrypt the incoming data
+        const [success, decryptedData] = this.decryptGCM(
+            message.getEncryptedData(),
+            message.getNonce(),
+            message.getAad(),
+            negotiationKey,
+            message.getTag()
+        );
+
+        if (!success)
+        {
+            service.log(`We could not decrypt received data. The local key for device ${device.id} is probably wrong`);
+            return;
+        } else
+        {
+            const negotiationKeyW32 = Hex.parse(negotiationKey);
+            const deviceRndW32 = Hex.parse(device.rnd);
+
+            // Decryption is a succes, now we verify hmac's
+            const negotiationMessage = new TuyaNegotiationMessage(decryptedData);
+            const verified = negotiationMessage.verifyNegotiationKey(deviceRndW32, negotiationKeyW32);
+
+            if (verified)
+            {
+                const sessionToken = negotiationMessage.generateSessionToken(deviceRndW32, negotiationKeyW32);
+
+                service.log('Generated session token ' + sessionToken.toString(Hex));
+
+                const[sessionKey] = this.encryptGCM(
+                    sessionToken.toString(Hex),
+                    device.rnd.slice(0, 24),
+                    null,
+                    negotiationKey
+                );
+
+                const sessionKeyW32 = Hex.parse(sessionKey);
+                const sessionVerified = negotiationMessage.verifySessionKey(sessionKeyW32, negotiationKeyW32);
+
+                if (sessionVerified)
+                {
+                    // We are all set! We have verified and set the sessionkey
+                    device.startSession(sessionKey, negotiationKey);
+                } else
+                {
+                    service.log('Session key could not be verified');
+                }
+            } else
+            {
+                service.log('Could not verify negotiation key');
             }
         }
     }

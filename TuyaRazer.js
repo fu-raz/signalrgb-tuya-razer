@@ -70,11 +70,7 @@ export function DiscoveryService()
 
     this.Initialize = function()
     {
-        let ipCacheJSON = service.getSetting('ipCache', 'cache');
-        if (ipCacheJSON) this.ipCache = JSON.parse(ipCacheJSON);
-
         this.negotiator = new TuyaNegotiator();
-
         this.broadcast = new TuyaBroadcast();
         this.broadcast.on('broadcast.device', this.handleTuyaDiscovery.bind(this));
     }
@@ -83,15 +79,6 @@ export function DiscoveryService()
     {
         let deviceData = data;
 
-        // Try to find cached data
-        if (this.ipCache.hasOwnProperty(data.gwId))
-        {
-            // If we have cached data, use the cached data
-            deviceData = this.ipCache[data.gwId];
-            // Set a new ip if it no longer matches
-            if (deviceData.ip !== data.ip) deviceData.ip = data.ip;
-        }
-
         // Check if there's already a controller with this id
         if (!service.hasController(deviceData.gwId))
         {
@@ -99,7 +86,6 @@ export function DiscoveryService()
             try {
                 let tuyaDevice = new TuyaDevice(deviceData, this.negotiator.crc);
                 let controller = new TuyaController(tuyaDevice);
-                tuyaDevice.saveToCache();
 
                 try {
                     this.negotiator.addDevice(tuyaDevice);
@@ -121,7 +107,7 @@ export function DiscoveryService()
             // But the device detected isn't initialized
             if (!controller.tuyaDevice.initialized && controller.tuyaDevice.localKey)
             {
-                // this.negotiator.negotiate();
+                this.negotiator.negotiate();
             }
         }
     }

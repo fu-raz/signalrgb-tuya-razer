@@ -10,11 +10,17 @@ export default class TuyaDevice extends BaseClass
     {
         super();
 
+        this.id             = deviceData.gwId;
+        const deviceJson    = service.getSetting(this.id, 'data');
+        if (deviceJson)
+        {
+            deviceData = JSON.parse(deviceJson);
+        }
+
         this.enabled        = deviceData.hasOwnProperty('enabled') ? deviceData.enabled : false;
         this.deviceType     = deviceData.hasOwnProperty('deviceType') ? deviceData.deviceType : 0;
         this.localKey       = deviceData.hasOwnProperty('localKey') ? deviceData.localKey : null;
 
-        this.id             = deviceData.gwId;
         this.name           = this.getName();
 
         this.ip             = deviceData.ip;
@@ -23,9 +29,12 @@ export default class TuyaDevice extends BaseClass
         this.version        = deviceData.version;
         this.productKey     = deviceData.productKey;
 
-        this.token          = deviceData.hasOwnProperty('token') ? deviceData.token : this.randomHexBytes(16);
-        this.rnd            = deviceData.hasOwnProperty('rnd') ? deviceData.rnd : this.randomHexBytes(16);
+        this.token          = this.getToken(deviceData, 'token');
+        this.rnd            = this.getToken(deviceData, 'rnd');
         this.crc            = this.calculateCrc(crc);
+
+        this.negotiationKey = deviceData.hasOwnProperty('negotiationKey') ? deviceData.negotiationKey : null;
+        this.sessionKey     = deviceData.hasOwnProperty('sessionKey') ? deviceData.sessionKey : null;
 
         this.initialized    = false;
     }
@@ -39,6 +48,18 @@ export default class TuyaDevice extends BaseClass
         }
 
         return `Tuya device ${this.id}`;
+    }
+
+    getToken(deviceData, name)
+    {
+        if (deviceData.hasOwnProperty(name))
+        {
+            if (deviceData[name].length == 32)
+            {
+                return deviceData[name];
+            }
+        }
+        return this.randomHexBytes(16);
     }
 
     getLedNames()
@@ -114,7 +135,6 @@ export default class TuyaDevice extends BaseClass
             this.enabled = enabled;
             this.deviceType = deviceType;
             this.localKey = localKey;
-
             this.saveToCache();
         }
     }
@@ -139,6 +159,17 @@ export default class TuyaDevice extends BaseClass
         return negotiatonHeader + this.token + this.rnd;
     }
 
+    startSession(sessionKey, negotiationKey)
+    {
+        service.log('Keys successfully negotiated, saving and starting session');
+        this.sessionKey = sessionKey;
+        this.negotiationKey = negotiationKey;
+
+        this.initialized = true;
+        
+        this.saveToCache();
+    }
+
     toJson()
     {
         return {
@@ -154,21 +185,24 @@ export default class TuyaDevice extends BaseClass
             localKey: this.localKey,
             token: this.token,
             rnd: this.rnd,
-            crc: this.crc
+            crc: this.crc,
+            negotiationKey: this.negotiationKey,
+            sessionKey: this.sessionKey,
         };
     }
 
     saveToCache()
     {
         service.log('Saving to cache');
-        let ipCache = {};
-        const ipCacheJSON = service.getSetting('ipCache', 'cache');
-        if (ipCacheJSON) ipCache = JSON.parse(ipCacheJSON);
+        service.saveSetting(this.id, 'data', JSON.stringify(this.toJson()));
+        // let ipCache = {};
+        // const ipCacheJSON = service.getSetting('ipCache', 'cache');
+        // if (ipCacheJSON) ipCache = JSON.parse(ipCacheJSON);
 
-        ipCache[this.gwId] = this.toJson();
-        service.saveSetting('ipCache', 'cache', JSON.stringify(ipCache));
+        // ipCache[this.gwId] = this.toJson();
+        // service.saveSetting('ipCache', 'cache', JSON.stringify(ipCache));
 
-        service.log('Saved data');
-        service.log(this.toJson());
+        // service.log('Saved data');
+        // service.log(this.toJson());
     }
 }

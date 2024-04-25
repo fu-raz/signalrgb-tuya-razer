@@ -34,16 +34,34 @@ export default class BaseClass
         this.singleEvents[eventName].push(callback);
     }
 
-    hexToArray(hex)
+    hexToByteArray(hexString, byteLen)
     {
-        let w32 = Hex.parse(hex);
-        return Array.from(w32.toUint8Array());
+        let w32 = this.getW32FromHex(hexString, byteLen);
+        return w32.toUint8Array();
     }
 
-    hexFromString(str)
+    hexToArray(hex)
+    {
+        return Array.from(this.hexToByteArray(hex));
+    }
+
+    hexFromString(str, byteLen)
     {
         let w32 = Utf8.parse(str);
-        return w32.toString(Hex);
+        let hex = w32.toString(Hex);
+
+        if (byteLen)
+        {
+            if (byteLen > hex.length / 2)
+            {
+                hex = hex.slice(0, byteLen * 2);
+            } else
+            {
+                hex = this.zeroPad(hex, 2 * byteLen);
+            }
+        }
+
+        return hex;
     }
 
     byteArrayToHex(bytes)
@@ -60,11 +78,16 @@ export default class BaseClass
 
         return Hex.parse(hexString);
     }
-
-    byteArrayFromHex(hexString, byteLen)
+    
+    getW32FromString(string, byteLen)
     {
-        let w32 = this.getW32FromHex(hexString, byteLen);
-        return w32.toUint8Array();
+        let w32 = Utf8.parse(string);
+        if (byteLen)
+        {
+            return w32.slice(0, byteLen);
+        }
+
+        return w32;
     }
 
     randomHexBytes(num)

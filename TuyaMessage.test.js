@@ -19,8 +19,12 @@ export default class TuyaMessage extends BaseClass
             
             this.nonce = data.slice(26, 38);
             this.length = data.slice(42, 46);
-            this.encryptedData = data.slice(46, 46 + parseInt(this.length.toString("hex"), 16));
-            this.tag = data.slice(46 + parseInt(this.length.toString("hex"), 16), data.length - 4);
+
+            const dataLengthHex = this.byteArrayToHex(this.length);
+            const deviceDataLength = parseInt(dataLengthHex, 16);
+
+            this.encryptedData = data.slice(46, 46 + deviceDataLength);
+            this.tag = data.slice(46 + deviceDataLength, data.length - 4);
             this.tail = data.slice(data.length - 4, data.length);
         }
     }
@@ -31,5 +35,33 @@ export default class TuyaMessage extends BaseClass
             this.equals(this.validHeader, this.header) &&
             this.equals(this.validTail, this.tail)
         );
+    }
+
+    getEncryptedData()
+    {
+        let hex = this.byteArrayToHex(this.encryptedData);
+        service.log('encryptedData: ' + hex);
+        return hex;
+    }
+
+    getNonce()
+    {
+        let hex = this.byteArrayToHex(this.nonce);
+        service.log('nonce: ' + hex);
+        return hex;
+    }
+
+    getAad()
+    {
+        let hex = this.byteArrayToHex(this.aad);
+        service.log('aad: ' + hex);
+        return hex;
+    }
+
+    getTag()
+    {
+        let hex = this.byteArrayToHex(this.tag);
+        service.log('tag: ' + hex);
+        return hex;
     }
 }

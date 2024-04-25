@@ -198,4 +198,14 @@ export class Word32Array {
 
         return true;
     }
+
+    xor(word32Array) {
+        const xorWords = [];
+        const length = Math.max(this._words.length, word32Array.words.length);
+        for (let i = 0; i < length; i++) {
+            // Use the | 0 to ensure the undefined values are treated as 0
+            xorWords[i] = (this._words[i] | 0) ^ (word32Array.words[i] | 0);
+        }
+        return new Word32Array(xorWords, this._nSignificantBytes);
+    }
 }
