@@ -2,6 +2,7 @@ import TuyaBroadcast from './TuyaBroadcast.test.js';
 import TuyaController from './TuyaController.test.js';
 import TuyaDevice from './TuyaDevice.test.js';
 import TuyaNegotiator from './TuyaNegotiator.test.js';
+import TuyaVirtualDevice from './TuyaVirtualDevice.test.js';
 
 /* ---------- */
 /*   DEVICE   */
@@ -23,14 +24,14 @@ export function ControllableParameters()
 	];
 }
 
-let tuyaDevice;
+let tuyaVirtualDevice;
 
 export function Initialize()
 {
     if (controller.enabled)
     {
         // Here we create the device
-        tuyaDevice = new TuyaDevice(controller.toJson());
+        tuyaVirtualDevice = new TuyaVirtualDevice(controller.tuyaDevice);
     }
 }
 
@@ -41,8 +42,11 @@ export function Update()
 
 export function Render()
 {
-    let now = Date.now();
-    tuyaDevice.render(lightingMode, forcedColor, now);
+    if (controller.enabled)
+    {
+        let now = Date.now();
+        tuyaVirtualDevice.render(lightingMode, forcedColor, now);
+    }
 }
 
 export function Shutdown()
@@ -84,8 +88,15 @@ export function DiscoveryService()
         {
             service.log('Creating controller for ' + deviceData.gwId);
             try {
-                let tuyaDevice = new TuyaDevice(deviceData, this.negotiator.crc);
-                let controller = new TuyaController(tuyaDevice);
+
+                const deviceJson = service.getSetting(deviceData.gwId, 'data');
+                if (deviceJson)
+                {
+                    deviceData = JSON.parse(deviceJson);
+                }
+
+                const tuyaDevice = new TuyaDevice(deviceData, this.negotiator.crc);
+                const controller = new TuyaController(tuyaDevice);
 
                 try {
                     this.negotiator.addDevice(tuyaDevice);

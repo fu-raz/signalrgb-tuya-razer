@@ -6,9 +6,23 @@ export default class TuyaController extends BaseClass
     constructor(tuyaDevice)
     {
         super();
+        this.enabled = false;
         this.id = tuyaDevice.id;
         this.tuyaDevice = tuyaDevice;
         this.deviceList = this.getDevices();
+
+        this.tuyaDevice.on('device:initialized', this.deviceInitialized.bind(this));
+    }
+
+    deviceInitialized()
+    {
+        service.log('Device initialized');
+        service.log(this);
+        
+        this.enabled = true;
+        service.removeController(this);
+        service.addController(this);
+        service.announceController(this);
     }
 
     getDevices()

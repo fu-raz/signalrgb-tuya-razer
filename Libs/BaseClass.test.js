@@ -201,4 +201,15 @@ export default class BaseClass
         v = parseInt(v * 1000);
         return [h, s, v];
     }
+
+    hexToRGB(hexColor)
+    {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hexColor);
+        const colors = [];
+        colors[0] = parseInt(result[1], 16);
+        colors[1] = parseInt(result[2], 16);
+        colors[2] = parseInt(result[3], 16);
+
+        return colors;
+    }
 }
