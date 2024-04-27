@@ -42,6 +42,8 @@ export default class TuyaDevice extends TuyaEncryptor
         this.initialized     = deviceData.hasOwnProperty('initialized') ? deviceData.initialized : false;
 
         this.negotiatorCrc   = deviceData.hasOwnProperty('negotiatorCrc') ? deviceData.negotiatorCrc : crc;
+
+        if (!this.broadcastIp) this.setBroadcastIp(this.ip);
         
         this.socket          = null;
     }

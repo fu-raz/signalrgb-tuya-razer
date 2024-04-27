@@ -51,6 +51,8 @@ export default class TuyaNegotiator extends TuyaEncryptor
     {
         if (!this.devices.hasOwnProperty(tuyaDevice.crc))
         {
+            if (!this.broadcastIp) this.setBroadcastIp(tuyaDevice.ip);
+
             this.devices[tuyaDevice.crc] = tuyaDevice;
             this.negotiate();
         }

@@ -11,7 +11,7 @@ export default class TuyaEncryptor extends BaseClass
         super();
 
         this.broadcastPort = 40001;
-        this.broadcastIp = '255.255.255.255';
+        this.broadcastIp = null;
 
         this.currentSequence = 0x01;
         this.dataLength = 42;
@@ -27,6 +27,13 @@ export default class TuyaEncryptor extends BaseClass
         this.reserved = '00';
         this.key = '6f36045d84b042e01e29b7c819e37cf7';
         this.tail = '00009966';
+    }
+
+    setBroadcastIp(ipAddress)
+    {
+        let parts = ipAddress.split('.');
+        parts[3] = '255';
+        this.broadcastIp = parts.join('.');
     }
 
     getSequenceNumber()
